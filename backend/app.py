@@ -19,6 +19,7 @@ from backend.database import (
     get_telemetry_history
 )
 from backend.ml.predictor import predictor_instance
+from backend.notification_service import check_and_send_alert, get_all_notifications
 
 app = FastAPI()
 
@@ -85,6 +86,9 @@ async def ingest_hardware_data(payload: HardwareIngestPayload):
         "hum_variation": round(hum_variation, 2)
     }
     
+    # 3. Alert / Notification System Check
+    check_and_send_alert(ml_output)
+    
     data["ml_data"] = ml_output
     
     rec_id = save_telemetry(data)
@@ -127,6 +131,11 @@ async def get_latest():
 async def get_history(limit: int = Query(default=30, ge=5, le=200)):
     history = get_telemetry_history(limit=limit)
     return {"status": "success", "count": len(history), "history": history}
+
+@app.get("/api/notifications")
+async def get_notifications():
+    alerts = get_all_notifications()
+    return {"status": "success", "count": len(alerts), "notifications": alerts}
 
 @app.post("/api/ai/ask")
 async def ask_ai(payload: AIQuestionPayload):
