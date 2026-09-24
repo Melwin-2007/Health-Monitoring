@@ -9,6 +9,7 @@
 #include <Adafruit_SHT31.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <math.h>
 
@@ -190,8 +191,13 @@ void postToServer(float t, float h, float co2, float co, float pm) {
   snprintf(body, sizeof(body),
            "{\"temperature\":%.2f,\"humidity\":%.2f,\"co2\":%.0f,\"co\":%.2f,\"pm\":%.1f,\"level\":%d}",
            t, h, co2, co, pm, level);
+           
+  // Required for HTTPS URLs (like Render.com)
+  WiFiClientSecure client;
+  client.setInsecure(); // Bypass SSL verification for simplicity
+  
   HTTPClient http;
-  http.begin(SERVER_URL);
+  http.begin(client, SERVER_URL);
   http.addHeader("Content-Type", "application/json");
   int code = http.POST(body);
   Serial.printf("POST -> %d\n", code);
