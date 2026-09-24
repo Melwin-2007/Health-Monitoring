@@ -52,3 +52,45 @@ def check_and_send_alert(ml_output: dict):
     print(f"BODY: {alert['message']} -> {alert['action_required']}\n")
 
     save_notification(alert)
+    
+    # -----------------------------------------------------
+    # Email Dispatcher
+    # -----------------------------------------------------
+    import os, json, smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    try:
+        with open(config_path, "r") as f:
+            cfg = json.load(f)
+            target_email = cfg.get("alert_email")
+    except:
+        target_email = None
+        
+    if target_email:
+        # NOTE: You MUST provide your own SMTP credentials here for it to actually send.
+        # It is highly recommended to use Environment Variables for security.
+        SMTP_SERVER = "smtp.gmail.com"
+        SMTP_PORT = 587
+        SMTP_SENDER = "YOUR_GMAIL_HERE@gmail.com"
+        # Generate an "App Password" in Google Account Security settings
+        SMTP_PASSWORD = "YOUR_APP_PASSWORD_HERE"
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = SMTP_SENDER
+            msg['To'] = target_email
+            msg['Subject'] = alert['title']
+            
+            body = f"{alert['message']}\n\nAction Required: {alert['action_required']}"
+            msg.attach(MIMEText(body, 'plain'))
+            
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SMTP_SENDER, SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print(f"[EMAIL SENT] Successfully dispatched alert to {target_email}")
+        except Exception as e:
+            print(f"[EMAIL FAILED] Could not send email to {target_email}. Did you configure your SMTP credentials? Error: {e}")

@@ -50,6 +50,9 @@ class AIQuestionPayload(BaseModel):
     humidity: Optional[float] = None
     co: Optional[float] = None
 
+class EmailSettingsPayload(BaseModel):
+    email: str
+
 
 @app.on_event("startup")
 async def on_startup():
@@ -136,6 +139,26 @@ async def get_history(limit: int = Query(default=30, ge=5, le=200)):
 async def get_notifications():
     alerts = get_all_notifications()
     return {"status": "success", "count": len(alerts), "notifications": alerts}
+
+@app.post("/api/settings/email")
+async def save_email(payload: EmailSettingsPayload):
+    import json
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                cfg = json.load(f)
+        else:
+            cfg = {}
+    except:
+        cfg = {}
+        
+    cfg["alert_email"] = payload.email
+    
+    with open(config_path, "w") as f:
+        json.dump(cfg, f)
+        
+    return {"status": "success", "message": "Email saved successfully."}
 
 @app.post("/api/ai/ask")
 async def ask_ai(payload: AIQuestionPayload):

@@ -296,6 +296,41 @@ function saveGroqKey() {
   toggleGroqModal();
 }
 
+// Email Modal functions
+function toggleEmailModal() {
+  const m = document.getElementById('email-modal');
+  m.classList.toggle('hidden');
+  m.classList.toggle('flex');
+}
+
+async function saveAlertEmail() {
+  const email = document.getElementById('alert-email-input').value.trim();
+  const btn = document.getElementById('save-email-btn');
+  btn.textContent = 'Saving...';
+  
+  try {
+    const res = await fetch('/api/settings/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      if (email) {
+        document.getElementById('email-status-label').textContent = 'Alerts On';
+      } else {
+        document.getElementById('email-status-label').textContent = 'Alerts Off';
+      }
+      toggleEmailModal();
+    } else {
+      alert("Failed to save email.");
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+  btn.textContent = 'Save Email';
+}
+
 // Master Polling Loop
 async function pollStatus() {
   try {
