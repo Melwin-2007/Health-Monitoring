@@ -28,9 +28,14 @@ def init_db():
                 co2 REAL NOT NULL,
                 co REAL NOT NULL,
                 pm REAL NOT NULL,
-                level INTEGER NOT NULL
+                level INTEGER NOT NULL,
+                ml_data TEXT
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE telemetry ADD COLUMN ml_data TEXT")
+        except sqlite3.OperationalError:
+            pass
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_time ON telemetry(timestamp)")
         conn.commit()
 
@@ -40,8 +45,8 @@ def save_telemetry(data: Dict[str, Any]) -> int:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO telemetry (
-                timestamp, temperature, humidity, co2, co, pm, level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                timestamp, temperature, humidity, co2, co, pm, level, ml_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             now_str,
             data.get("temperature", 25.0),
@@ -49,7 +54,8 @@ def save_telemetry(data: Dict[str, Any]) -> int:
             data.get("co2", 400.0),
             data.get("co", 0.0),
             data.get("pm", 0.0),
-            data.get("level", 0)
+            data.get("level", 0),
+            json.dumps(data.get("ml_data", {}))
         ))
         conn.commit()
         return cursor.lastrowid
@@ -59,13 +65,30 @@ def get_latest_telemetry() -> Optional[Dict[str, Any]]:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM telemetry ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("ml_data"):
+            try:
+                d["ml_data"] = json.loads(d["ml_data"])
+            except:
+                d["ml_data"] = {}
+        return d
 
 def get_telemetry_history(limit: int = 60) -> List[Dict[str, Any]]:
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM telemetry ORDER BY id DESC LIMIT ?", (limit,))
         rows = cursor.fetchall()
-        return [dict(r) for r in reversed(rows)]
+        res = []
+        for r in reversed(rows):
+            d = dict(r)
+            if d.get("ml_data"):
+                try:
+                    d["ml_data"] = json.loads(d["ml_data"])
+                except:
+                    d["ml_data"] = {}
+            res.append(d)
+        return res
 
 init_db()

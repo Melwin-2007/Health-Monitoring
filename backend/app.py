@@ -18,6 +18,7 @@ from backend.database import (
     get_latest_telemetry,
     get_telemetry_history
 )
+from backend.ml.predictor import predictor_instance
 
 app = FastAPI()
 
@@ -58,6 +59,10 @@ async def ingest_hardware_data(payload: HardwareIngestPayload):
     SERVER_STATE["last_hardware_ping"] = datetime.now().isoformat()
     
     data = payload.dict()
+    # Process ML logic
+    ml_output = predictor_instance.process_telemetry(data["temperature"], data["humidity"], data["co"])
+    data["ml_data"] = ml_output
+    
     rec_id = save_telemetry(data)
     data["record_id"] = rec_id
     data["timestamp"] = datetime.now().isoformat()
@@ -101,36 +106,19 @@ async def get_history(limit: int = Query(default=30, ge=5, le=200)):
 
 @app.post("/api/ai/ask")
 async def ask_ai(payload: AIQuestionPayload):
-    import httpx
-    if not payload.api_key:
-        return {
-            "status": "success",
-            "question": payload.question,
-            "provider": "Local Fallback AI",
-            "answer": f"You asked: {payload.question}\n\nSince no Groq API Key was provided, this is a fallback answer based on your telemetry: T={payload.temperature}C, H={payload.humidity}%, CO={payload.co}ppm."
-        }
-
-    headers = {
-        "Authorization": f"Bearer {payload.api_key}",
-        "Content-Type": "application/json"
-    }
-    prompt = f"The user asks: {payload.question}. Current telemetry: Temp {payload.temperature}C, Humidity {payload.humidity}%, CO {payload.co}ppm. Provide a short, plain-english answer."
-    data = {
-        "model": "llama3-8b-8192",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 150
+    from backend.ai_service import answer_user_question
+    
+    telemetry = {
+        "temperature": payload.temperature,
+        "humidity": payload.humidity,
+        "co_ppm": payload.co,
+        "predicted_co2_ppm": 400.0,
+        "aqi": 50,
+        "aqi_category": "Good",
+        "health_risk_level": "Low"
     }
     
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=data, timeout=10.0)
-            resp.raise_for_status()
-            res_json = resp.json()
-            answer = res_json['choices'][0]['message']['content']
-            return {"status": "success", "question": payload.question, "provider": "Groq LLaMA", "answer": answer}
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
+    return answer_user_question(payload.question, telemetry, payload.api_key)
 
 # Frontend static files mounting
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
