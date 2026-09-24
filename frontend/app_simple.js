@@ -38,8 +38,8 @@ function renderDashboard(t) {
   const hum = Math.round(t.humidity || 50.0);
   const pm = Math.round(t.pm || 0.0);
 
-  // Big AQI Score & Colors (Use ML AQI and Risk Level)
-  const aqiScore = ml.aqi !== undefined ? ml.aqi : (t.level || 0);
+  // Big AQI Score & Colors (Use ML Health Risk Score 0-100)
+  const aqiScore = ml.health_risk_score !== undefined ? ml.health_risk_score : (t.level || 0);
   const riskLevel = ml.health_risk_level || "Low";
 
   const bigNum = document.getElementById('big-aqi-number');

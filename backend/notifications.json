@@ -1,0 +1,9 @@
+[
+  {
+    "timestamp": "2026-09-24T21:27:23.766282",
+    "level": "Severe",
+    "title": "[SEVERE] Health Risk Alert",
+    "message": "Dangerous air pollution levels. Urgent precautions required.",
+    "action_required": "Seal room windows; activate emergency air filtration"
+  }
+]

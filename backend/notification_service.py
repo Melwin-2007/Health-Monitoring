@@ -41,7 +41,7 @@ def check_and_send_alert(ml_output: dict):
     alert = {
         "timestamp": now.isoformat(),
         "level": risk_level,
-        "title": f"🚨 {risk_level} Health Risk Alert",
+        "title": f"[{risk_level.upper()}] Health Risk Alert",
         "message": ml_output.get("health_risk_summary", "Air quality has reached dangerous levels."),
         "action_required": ml_output.get("ventilation_advisory", "Take precautions immediately.")
     }
