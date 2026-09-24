@@ -59,6 +59,7 @@ def check_and_send_alert(ml_output: dict):
     import os, json, smtplib
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
+    from email.mime.image import MIMEImage
     
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
     try:
@@ -69,22 +70,69 @@ def check_and_send_alert(ml_output: dict):
         target_email = None
         
     if target_email:
-        # NOTE: You MUST provide your own SMTP credentials here for it to actually send.
-        # It is highly recommended to use Environment Variables for security.
-        SMTP_SERVER = "smtp.gmail.com"
-        SMTP_PORT = 587
-        SMTP_SENDER = "YOUR_GMAIL_HERE@gmail.com"
-        # Generate an "App Password" in Google Account Security settings
-        SMTP_PASSWORD = "YOUR_APP_PASSWORD_HERE"
+        # Load from environment variables (from .env)
+        SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+        SMTP_SENDER = os.getenv("SMTP_SENDER")
+        # Automatically remove spaces from the Google App Password if the user pasted them
+        SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").replace(" ", "")
         
+        if not SMTP_SENDER or not SMTP_PASSWORD:
+            print(f"[EMAIL ABORTED] Missing SMTP_SENDER or SMTP_PASSWORD in environment variables.")
+            return
+
         try:
-            msg = MIMEMultipart()
-            msg['From'] = SMTP_SENDER
+            msg = MIMEMultipart('related')
+            msg['From'] = f"Smart Air Quality Monitoring system <{SMTP_SENDER}>"
             msg['To'] = target_email
             msg['Subject'] = alert['title']
             
-            body = f"{alert['message']}\n\nAction Required: {alert['action_required']}"
-            msg.attach(MIMEText(body, 'plain'))
+            # Create the HTML structure
+            html = f"""
+            <html>
+              <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                  <!-- Header Image -->
+                  <img src="cid:banner" alt="Dangerous Air Pollution Levels" style="width: 100%; display: block;" />
+                  
+                  <!-- Content Body -->
+                  <div style="padding: 30px;">
+                    <h2 style="color: #dc2626; margin-top: 0; font-size: 24px;">Dangerous air pollution levels.</h2>
+                    <p style="font-size: 16px; color: #4b5563; font-weight: bold; margin-bottom: 25px;">Urgent precautions required.</p>
+                    
+                    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 4px;">
+                      <h3 style="color: #b91c1c; margin-top: 0; font-size: 18px; text-transform: uppercase;">Action Required</h3>
+                      <p style="color: #7f1d1d; margin-bottom: 0; font-size: 16px;">{alert['action_required']}</p>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #6b7280; margin-top: 25px;">
+                      <strong>Detailed Analysis:</strong><br/>
+                      {alert['message']}
+                    </p>
+                    
+                    <p style="font-size: 12px; color: #9ca3af; margin-top: 40px; text-align: center;">
+                      Sent automatically by your Smart Air Quality Monitoring system
+                    </p>
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+            
+            msg_alternative = MIMEMultipart('alternative')
+            msg.attach(msg_alternative)
+            
+            plain_text = f"Dangerous air pollution levels. Urgent precautions required.\n\nAction Required: {alert['action_required']}\n\nDetails: {alert['message']}"
+            msg_alternative.attach(MIMEText(plain_text, 'plain'))
+            msg_alternative.attach(MIMEText(html, 'html'))
+            
+            # Attach Image
+            banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "alert_banner.jpg")
+            if os.path.exists(banner_path):
+                with open(banner_path, 'rb') as img_file:
+                    msg_image = MIMEImage(img_file.read())
+                    msg_image.add_header('Content-ID', '<banner>')
+                    msg.attach(msg_image)
             
             server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
             server.starttls()

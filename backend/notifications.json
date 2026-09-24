@@ -5,5 +5,33 @@
     "title": "[SEVERE] Health Risk Alert",
     "message": "Dangerous air pollution levels. Urgent precautions required.",
     "action_required": "Seal room windows; activate emergency air filtration"
+  },
+  {
+    "timestamp": "2026-09-24T21:44:07.298679",
+    "level": "Severe",
+    "title": "[SEVERE] Health Risk Alert",
+    "message": "Dangerous air pollution levels. Urgent precautions required.",
+    "action_required": "Seal room windows; activate emergency air filtration"
+  },
+  {
+    "timestamp": "2026-09-24T21:47:25.630053",
+    "level": "High",
+    "title": "[HIGH] Health Risk Alert",
+    "message": "Test Summary",
+    "action_required": "Test Action"
+  },
+  {
+    "timestamp": "2026-09-24T21:47:32.317017",
+    "level": "High",
+    "title": "[HIGH] Health Risk Alert",
+    "message": "Test Summary",
+    "action_required": "Test Action"
+  },
+  {
+    "timestamp": "2026-09-24T21:52:18.756650",
+    "level": "Severe",
+    "title": "[SEVERE] Health Risk Alert",
+    "message": "Dangerous air pollution levels. Urgent precautions required.",
+    "action_required": "Seal room windows; activate emergency air filtration"
   }
 ]
