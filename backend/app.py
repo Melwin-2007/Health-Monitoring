@@ -59,8 +59,32 @@ async def ingest_hardware_data(payload: HardwareIngestPayload):
     SERVER_STATE["last_hardware_ping"] = datetime.now().isoformat()
     
     data = payload.dict()
-    # Process ML logic
-    ml_output = predictor_instance.process_telemetry(data["temperature"], data["humidity"], data["co"])
+    
+    # 1. Data Preprocessing & Feature Extraction
+    history = get_telemetry_history(limit=5)
+    temp_raw = max(-40.0, min(125.0, data["temperature"]))
+    hum_raw = max(0.0, min(100.0, data["humidity"]))
+    co_raw = max(0.0, data["co"])
+    
+    if history:
+        avg_temp = (sum(r["temperature"] for r in history) + temp_raw) / (len(history) + 1)
+        avg_hum = (sum(r["humidity"] for r in history) + hum_raw) / (len(history) + 1)
+        avg_co = (sum(r["co"] for r in history) + co_raw) / (len(history) + 1)
+    else:
+        avg_temp, avg_hum, avg_co = temp_raw, hum_raw, co_raw
+        
+    temp_variation = temp_raw - avg_temp
+    hum_variation = hum_raw - avg_hum
+
+    # 2. Process ML logic using cleaned features
+    ml_output = predictor_instance.process_telemetry(avg_temp, avg_hum, avg_co)
+    ml_output["features_extracted"] = {
+        "avg_temperature": round(avg_temp, 2),
+        "avg_humidity": round(avg_hum, 2),
+        "temp_variation": round(temp_variation, 2),
+        "hum_variation": round(hum_variation, 2)
+    }
+    
     data["ml_data"] = ml_output
     
     rec_id = save_telemetry(data)
