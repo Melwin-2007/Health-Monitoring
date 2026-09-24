@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirQual — Smart Air Quality & Health Assistant</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    /* Clean glass card */
+    .clean-card {
+      background: rgba(18, 20, 29, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      transition: all 0.25s ease;
+    }
+    .clean-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+  </style>
+</head>
+<body class="bg-[#090b10] text-[#f4f4f7] min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-black">
+
+  <!-- HBO CINEMATIC INTRO SCREEN (Kept as user requested!) -->
+  <div id="hbo-intro-screen" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center transition-opacity duration-700">
+    <canvas id="hbo-canvas" class="absolute inset-0 w-full h-full opacity-20 pointer-events-none"></canvas>
+    <div class="relative z-10 text-center px-6 max-w-lg space-y-4">
+      <div class="text-[11px] mono tracking-[0.3em] text-neutral-500 uppercase">
+        HSIT Nidasoshi • CSE 2025-26
+      </div>
+      <h1 class="text-5xl sm:text-6xl font-extrabold tracking-wider text-white">
+        AIRQUAL
+      </h1>
+      <p class="text-xs text-neutral-400 max-w-sm mx-auto">
+        Smart Air Quality Monitoring &amp; Health Risk Prediction
+      </p>
+      <div class="pt-4">
+        <button id="hbo-enter-btn" class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-widest rounded-full transition shadow-lg shadow-emerald-500/20">
+          Enter Dashboard 🔊
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROQ API KEY MODAL -->
+  <div id="groq-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#121520] border border-white/15 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="bot" class="w-5 h-5 text-emerald-400"></i>
+          <h3 class="font-bold text-white text-sm">Groq AI Setup (Optional)</h3>
+        </div>
+        <button onclick="toggleGroqModal()" class="text-neutral-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-neutral-400 leading-relaxed">
+        Enter your free <strong>Groq API Key</strong> to use <strong>LLaMA-3.3-70B</strong> for ultra-fast medical and air quality answers. If left blank, AirQual automatically uses its built-in clinical AI engine.
+      </p>
+      <div>
+        <label class="text-[11px] font-semibold text-neutral-300 block mb-1">Groq API Key:</label>
+        <input type="password" id="groq-key-input" placeholder="gsk_..." class="w-full p-2.5 bg-black/60 border border-white/15 rounded-xl text-white font-mono text-xs outline-none focus:border-emerald-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="saveGroqKey()" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl transition">
+          Save Key
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP APP BAR -->
+  <header class="sticky top-0 z-40 bg-[#090b10]/95 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-8 py-3.5">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <i data-lucide="wind" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-base text-white tracking-tight">AirQual</span>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-2 py-0.5 rounded-full">Active</span>
+          </div>
+          <p class="text-[11px] text-neutral-400 hidden sm:block">Smart Air Quality &amp; Health Protection System</p>
+        </div>
+      </div>
+
+      <!-- Quick Section Links -->
+      <div class="hidden md:flex items-center gap-6 text-xs font-semibold text-neutral-400">
+        <a href="#live-status" class="hover:text-white transition">Current Air</a>
+        <a href="#ai-assistant" class="hover:text-white transition">Ask AI</a>
+        <a href="#hardware" class="hover:text-white transition">Hardware Setup</a>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-2.5">
+        <!-- Replay Sound -->
+        <button onclick="playHboSoundmark()" title="Replay Chime" class="p-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/20 text-neutral-300 hover:text-white transition">
+          <i data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Groq Key Button -->
+        <button onclick="toggleGroqModal()" class="px-3 py-1.5 rounded-xl bg-neutral-900 border border-white/10 hover:border-emerald-500/40 text-xs font-medium text-neutral-300 hover:text-white transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="groq-status-label">Groq AI</span>
+        </button>
+
+        <!-- CSV Export -->
+        <a href="/api/export/csv" download="air_quality_records.csv" title="Download Data" class="p-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/20 text-neutral-300 hover:text-white transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-8">
+
+    <!-- 1. LIVE STATUS BANNER: CLEAR, BIG & EASY TO UNDERSTAND -->
+    <section id="live-status" class="clean-card p-6 sm:p-8 relative overflow-hidden bg-gradient-to-br from-[#121724] to-[#0c0f17]">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        
+        <!-- Left: Overall Health Verdict -->
+        <div class="space-y-2 max-w-xl">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-neutral-400">Current Air Status</span>
+            <span id="air-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Good Air Quality
+            </span>
+          </div>
+
+          <h2 id="air-verdict-title" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            The air is clean and safe to breathe.
+          </h2>
+
+          <p id="air-verdict-desc" class="text-sm text-neutral-300 leading-relaxed font-normal">
+            Pollution levels are low. Windows can be opened for fresh air ventilation, and outdoor exercise is safe for everyone including children and seniors.
+          </p>
+        </div>
+
+        <!-- Right: The Big AQI Circle / Score -->
+        <div class="flex items-center gap-4 bg-black/40 border border-white/10 p-5 rounded-2xl self-stretch md:self-auto justify-center">
+          <div class="text-center">
+            <div class="text-xs font-semibold text-neutral-400 uppercase">Air Quality Score</div>
+            <div class="flex items-baseline justify-center gap-1 my-1">
+              <span id="big-aqi-number" class="text-5xl font-extrabold font-mono text-emerald-400">0</span>
+              <span class="text-xs text-neutral-500">/ 3</span>
+            </div>
+            <div id="big-aqi-status" class="text-xs font-bold text-emerald-400">Safe Level</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. FIVE CORE METRICS -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      
+      <!-- Metric 1: Carbon Monoxide (CO) -->
+      <div class="clean-card p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Smoke &amp; Gas (CO)</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 font-semibold">Sensor Detected</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="card-co" class="text-3xl font-bold font-mono text-white">0.6</span>
+          <span class="text-xs text-neutral-400">ppm</span>
+        </div>
+        <p class="text-xs text-neutral-400">
+          Measures vehicle exhaust and stove smoke.
+        </p>
+      </div>
+
+      <!-- Metric 2: Carbon Dioxide (CO2) -->
+      <div class="clean-card p-5 space-y-3 border-emerald-500/30 bg-emerald-950/10">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Room Freshness (CO₂)</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Sensor Detected</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="card-co2" class="text-3xl font-extrabold font-mono text-emerald-400">440</span>
+          <span class="text-xs text-emerald-400/80">ppm</span>
+        </div>
+        <p class="text-xs text-neutral-400">
+          Calculates trapped CO₂ from people breathing in enclosed spaces.
+        </p>
+      </div>
+
+      <!-- Metric 3: PM (Dust) -->
+      <div class="clean-card p-5 space-y-3 border-blue-500/30 bg-blue-950/10">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-blue-400 uppercase tracking-wide">Dust (PM)</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold">Sharp Sensor</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="card-pm" class="text-3xl font-extrabold font-mono text-blue-400">0</span>
+          <span class="text-xs text-blue-400/80">µg/m³</span>
+        </div>
+        <p class="text-xs text-neutral-400">
+          Measures airborne dust particles.
+        </p>
+      </div>
+
+      <!-- Metric 4: Temperature -->
+      <div class="clean-card p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Temperature</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-semibold">Ambient</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="card-temp" class="text-3xl font-bold font-mono text-white">26.5</span>
+          <span class="text-xs text-neutral-400">°C</span>
+        </div>
+        <p id="card-temp-status" class="text-xs text-neutral-400">
+          Comfortable indoor and outdoor climate.
+        </p>
+      </div>
+
+      <!-- Metric 5: Humidity -->
+      <div class="clean-card p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-neutral-400 uppercase tracking-wide">Humidity</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-semibold">Moisture</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="card-hum" class="text-3xl font-bold font-mono text-white">56</span>
+          <span class="text-xs text-neutral-400">%</span>
+        </div>
+        <p id="card-hum-status" class="text-xs text-neutral-400">
+          Normal air moisture; prevents throat dryness.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- 3. ACTIONABLE ADVICE FOR REGULAR PEOPLE -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Mask Advice -->
+      <div class="clean-card p-5 flex items-start gap-3.5">
+        <div class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-neutral-400 uppercase">Mask Advice</h4>
+          <div id="action-mask" class="text-sm font-bold text-white mt-0.5">No mask needed</div>
+          <p class="text-xs text-neutral-400 mt-1">Air is safe to breathe outdoors without protective covering.</p>
+        </div>
+      </div>
+
+      <!-- Windows & Ventilation -->
+      <div class="clean-card p-5 flex items-start gap-3.5">
+        <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+          <i data-lucide="wind" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-neutral-400 uppercase">Room Ventilation</h4>
+          <div id="action-vent" class="text-sm font-bold text-white mt-0.5">Open windows for breeze</div>
+          <p class="text-xs text-neutral-400 mt-1">Fresh airflow helps keep indoor air pure and energized.</p>
+        </div>
+      </div>
+
+      <!-- Vulnerable Demographics -->
+      <div class="clean-card p-5 flex items-start gap-3.5">
+        <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
+          <i data-lucide="heart" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-neutral-400 uppercase">Children &amp; Asthma</h4>
+          <div id="action-health" class="text-sm font-bold text-white mt-0.5">Safe for all activities</div>
+          <p class="text-xs text-neutral-400 mt-1">Ideal conditions for outdoor sports, school play, and seniors.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 4. AI HEALTH ASSISTANT: ASK ANY QUESTION (GROQ LLaMA 3.3 INTEGRATED) -->
+    <section id="ai-assistant" class="clean-card p-6 space-y-4 border-emerald-500/25">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
+            <i data-lucide="message-square" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Ask the AirQual AI Health Assistant</h3>
+            <p class="text-xs text-neutral-400">Ask any question in plain English — Powered by Groq AI</p>
+          </div>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold">
+          AI Online
+        </span>
+      </div>
+
+      <!-- Quick Click Questions -->
+      <div>
+        <div class="text-xs text-neutral-400 mb-2 font-medium">Click any question below to ask instantly:</div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="askPresetQuestion('Is it safe for my child with asthma to play outside right now?')" class="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-xs text-neutral-300 hover:text-white transition">
+            🏃 Can children with asthma play outside?
+          </button>
+          <button onclick="askPresetQuestion('Why does AI predict CO2 if sensors only detect CO?')" class="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-xs text-neutral-300 hover:text-white transition">
+            🧠 How does AI predict CO₂ from CO?
+          </button>
+          <button onclick="askPresetQuestion('Should I wear a mask if I go outside right now?')" class="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-xs text-neutral-300 hover:text-white transition">
+            😷 Should I wear a mask outside?
+          </button>
+          <button onclick="askPresetQuestion('Should I open or close my bedroom windows today?')" class="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-xs text-neutral-300 hover:text-white transition">
+            🪟 Should I open my windows?
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Question Input Box -->
+      <form onsubmit="handleCustomQuestion(event)" class="flex gap-2">
+        <input type="text" id="user-question-input" placeholder="Type your own question here... (e.g., Is it safe to jog right now?)" class="flex-1 p-3 bg-black/50 border border-white/15 rounded-xl text-white text-xs outline-none focus:border-emerald-500 transition">
+        <button type="submit" id="ask-btn" class="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl transition flex items-center gap-1.5">
+          <span>Ask AI</span>
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        </button>
+      </form>
+
+      <!-- AI Response Bubble -->
+      <div id="ai-answer-box" class="p-4 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 leading-relaxed min-h-[70px]">
+        <div class="text-neutral-400 flex items-center gap-2">
+          <i data-lucide="bot" class="w-4 h-4 text-emerald-400"></i>
+          <span>Hello! I am your AI Air &amp; Health Assistant. Ask me anything about your air quality, health precautions, or how the hardware and AI work.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE CHART -->
+    <section class="clean-card p-6 space-y-4">
+      <div class="flex items-center justify-between text-xs mb-2">
+        <span class="font-bold text-neutral-300">Live Trend: Sensed CO (Red) vs Sensed CO₂ (Green)</span>
+        <span class="text-[11px] text-neutral-400">Updates dynamically</span>
+      </div>
+      <div class="h-56 w-full relative">
+        <canvas id="simpleTrendChart"></canvas>
+      </div>
+    </section>
+
+    <!-- 6. HARDWARE CONNECTION & TESTING (ESP32 / SENSORS) -->
+    <section id="hardware" class="clean-card p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">Physical Hardware Connection (ESP32 / Arduino)</h3>
+          <p class="text-xs text-neutral-400">Ready to receive live data from your real microcontroller</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div class="p-3 bg-black/40 border border-white/10 rounded-xl space-y-1">
+          <div class="font-bold text-emerald-400">1. Connected Sensors</div>
+          <div class="text-neutral-300">SHT30, MQ-135, MQ-7, Sharp Dust.</div>
+        </div>
+        <div class="p-3 bg-black/40 border border-white/10 rounded-xl space-y-1">
+          <div class="font-bold text-blue-400">2. Ingest Endpoint</div>
+          <div class="text-neutral-300 font-mono text-[11px]">POST http://localhost:8000/api/iot/ingest</div>
+        </div>
+        <div class="p-3 bg-black/40 border border-white/10 rounded-xl space-y-1">
+          <div class="font-bold text-amber-400">3. Arduino Code</div>
+          <div class="text-neutral-300">C++ sketch ready in <code class="text-emerald-400">firmware/esp32_airqual.ino</code>.</div>
+        </div>
+      </div>
+
+      <!-- Hardware Message Log -->
+      <div id="hw-log" class="p-3 bg-black/60 border border-white/10 rounded-xl font-mono text-[11px] text-neutral-400">
+        Ready to receive live sensor data...
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/[0.08] py-8 px-6 text-center text-xs text-neutral-500 space-y-1 mt-12">
+    <div>Smart Air Quality Monitoring and Health Risk Prediction System</div>
+    <div>Department of Computer Science &amp; Engineering, HSIT Nidasoshi (2025-26)</div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/hbo_intro.js"></script>
+  <script src="/static/app_simple.js"></script>
+</body>
+</html>

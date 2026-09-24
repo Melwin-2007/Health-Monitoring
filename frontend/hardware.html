@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIRQUAL // Hardware Silicon Gateway & Ingestion Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/cinematic.css">
+</head>
+<body class="bg-[#050506] text-[#f4f4f5] antialiased tech-grid selection:bg-[#00e5ff] selection:text-black">
+  <div class="crt-overlay"></div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-[#050506]/90 backdrop-blur-xl border-b border-white/[0.08] px-6 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <span class="w-2 h-2 bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]"></span>
+        <span class="font-display font-bold text-sm tracking-wider text-white">AIRQUAL<span class="text-[#00e5ff]">//</span>HARDWARE</span>
+      </a>
+      <nav class="flex items-center gap-4 text-xs font-mono">
+        <a href="/" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">01 // OVERVIEW</a>
+        <a href="/simulator" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">02 // SIMULATOR</a>
+        <a href="/hardware" class="px-2.5 py-1 text-white border-b-2 border-[#00e5ff] font-semibold">03 // HARDWARE LAB</a>
+        <a href="/analytics" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">04 // ANALYTICS</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div class="flex items-center justify-between border-b border-white/[0.08] pb-4">
+      <div>
+        <div class="text-[10px] font-mono text-[#00e5ff] tracking-widest uppercase">LAB 03 // SILICON INTERFACE</div>
+        <h1 class="text-2xl font-display font-bold text-white tracking-wide mt-1">Microcontroller Telemetry Console</h1>
+        <p class="text-xs text-[#71717a]">Physical ingestion port: POST http://0.0.0.0:8000/api/iot/ingest</p>
+      </div>
+      <button onclick="pushHardwareTest()" class="px-4 py-2 border border-[#00e5ff]/50 bg-[#00e5ff]/10 hover:bg-[#00e5ff]/20 text-xs font-mono text-[#00e5ff] transition flex items-center gap-2">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        <span>[ TRANSMIT TEST PACKET ]</span>
+      </button>
+    </div>
+
+    <!-- 3 COLUMN ARCHITECTURE -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono">
+      
+      <!-- Sensor Calibration & Electrical Pinout -->
+      <div class="instrument-card p-5 space-y-4">
+        <div class="text-xs font-bold text-white border-b border-white/10 pb-2 flex items-center justify-between">
+          <span>[SENSORS &amp; PINOUT]</span>
+          <span class="text-[#00e5ff]">3.3V LOGIC</span>
+        </div>
+        
+        <div class="space-y-3 text-xs">
+          <div class="p-3 bg-black/40 border border-white/5 space-y-1">
+            <div class="text-[#ff3333] font-bold">MQ-7 CARBON MONOXIDE</div>
+            <div class="text-[11px] text-[#71717a]">Pin: ADC 34 / A0 (12-bit, 0-4095)</div>
+            <div class="text-[10px] text-[#a1a1aa]">Formula: Rs/R0 = A * (ppm)^B (A=19.32, B=-0.64)</div>
+          </div>
+
+          <div class="p-3 bg-black/40 border border-white/5 space-y-1">
+            <div class="text-[#00ff66] font-bold">DHT22 AMBIENT CLIMATE</div>
+            <div class="text-[11px] text-[#71717a]">Pin: GPIO 4 (Digital One-Wire)</div>
+            <div class="text-[10px] text-[#a1a1aa]">Range: -40 to 80°C (±0.5°C), 0-100% RH (±2%)</div>
+          </div>
+
+          <div class="p-3 bg-black/40 border border-white/5 space-y-1">
+            <div class="text-[#ffb000] font-bold">STATUS INDICATOR</div>
+            <div class="text-[11px] text-[#71717a]">Pin: GPIO 2 (Onboard Blue LED)</div>
+            <div class="text-[10px] text-[#a1a1aa]">Blinks on HTTP 200 transmission acknowledgment</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Packet Terminal -->
+      <div class="instrument-card p-5 lg:col-span-2 space-y-3">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2 text-xs">
+          <span class="text-white font-bold">[REAL-TIME SERIAL INGESTION FEED]</span>
+          <span class="text-[#00e5ff] text-[10px] flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#00e5ff] animate-pulse"></span>
+            PORT LISTENING: 8000
+          </span>
+        </div>
+
+        <div id="hw-terminal" class="bg-black/80 border border-white/5 p-4 rounded-none h-80 overflow-y-auto font-mono text-[11px] space-y-1 text-slate-300">
+          <div class="text-[#71717a]">// AirQual Hardware Gateway Initialized...</div>
+          <div class="text-[#00ff66]">[14:51:23] INGEST &lt;= ESP32_PHYSICAL_01: Temp=28.4°C Hum=61% CO=3.10ppm --&gt; Inferred CO2=584.0ppm (AQI: 119 MODERATE)</div>
+          <div class="text-[#00ff66]">[14:34:46] INGEST &lt;= ESP32_PHYSICAL_01: Temp=28.6°C Hum=63% CO=4.25ppm --&gt; Inferred CO2=657.5ppm (AQI: 135 MODERATE)</div>
+        </div>
+
+        <div class="text-[10px] text-[#71717a] flex justify-between pt-1">
+          <span>PAYLOAD FORMAT: JSON { device_id, temp, hum, co_ppm }</span>
+          <span>LATENCY: ~14ms</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- C++ FIRMWARE CODE VIEWER -->
+    <div class="instrument-card p-5 space-y-3">
+      <div class="flex items-center justify-between border-b border-white/10 pb-2 text-xs font-mono">
+        <span class="text-white font-bold">[C++ FIRMWARE // ESP32 ARDUINO SKETCH]</span>
+        <span class="text-[#71717a]">File: firmware/esp32_airqual.ino</span>
+      </div>
+      <pre class="bg-black/90 p-4 border border-white/5 text-[11px] font-mono text-[#a1a1aa] overflow-x-auto max-h-64 leading-relaxed">
+#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+#include &lt;DHT.h&gt;
+
+const char* SERVER_URL = "http://192.168.1.100:8000/api/iot/ingest";
+const char* DEVICE_ID  = "ESP32_NODE_01";
+#define DHTPIN 4
+#define MQ7_PIN 34
+
+// Reads CO ppm using calibrated power law formula
+float readMq7CoPpm() {
+  int raw = analogRead(MQ7_PIN);
+  float v = (raw / 4095.0) * 3.3;
+  float rs = ((3.3 - v) / v) * 10.0;
+  return pow((rs / 12.0) / 19.32, 1.0 / -0.64);
+}
+      </pre>
+    </div>
+  </main>
+
+  <script>
+    async function pushHardwareTest() {
+      const t = (28.0 + Math.random() * 2).toFixed(1);
+      const h = Math.round(58 + Math.random() * 8);
+      const c = (3.0 + Math.random() * 1.5).toFixed(2);
+      try {
+        const res = await fetch('/api/iot/ingest', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ device_id: 'ESP32_PHYSICAL_01', temperature: parseFloat(t), humidity: parseFloat(h), co_ppm: parseFloat(c) })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const item = data.data;
+          const term = document.getElementById('hw-terminal');
+          const div = document.createElement('div');
+          div.className = 'text-[#00e5ff]';
+          div.textContent = `[${new Date().toLocaleTimeString()}] INGEST <= ESP32: Temp=${item.temperature}°C Hum=${item.humidity}% CO=${item.co_ppm}ppm --> Inferred CO2=${item.predicted_co2_ppm}ppm (AQI: ${item.aqi})`;
+          term.insertBefore(div, term.firstChild);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  </script>
+</body>
+</html>

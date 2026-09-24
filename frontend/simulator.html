@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIRQUAL // Multi-Dimensional Atmospheric Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/cinematic.css">
+</head>
+<body class="bg-[#050506] text-[#f4f4f5] antialiased tech-grid selection:bg-[#00ff66] selection:text-black">
+  <div class="crt-overlay"></div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-[#050506]/90 backdrop-blur-xl border-b border-white/[0.08] px-6 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <span class="w-2 h-2 bg-[#00ff66] shadow-[0_0_8px_#00ff66]"></span>
+        <span class="font-display font-bold text-sm tracking-wider text-white">AIRQUAL<span class="text-[#00ff66]">//</span>SIMULATOR</span>
+      </a>
+      <nav class="flex items-center gap-4 text-xs font-mono">
+        <a href="/" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">01 // OVERVIEW</a>
+        <a href="/simulator" class="px-2.5 py-1 text-white border-b-2 border-[#00ff66] font-semibold">02 // SIMULATOR</a>
+        <a href="/hardware" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">03 // HARDWARE LAB</a>
+        <a href="/analytics" class="px-2.5 py-1 text-[#71717a] hover:text-white transition">04 // ANALYTICS</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div class="flex items-center justify-between border-b border-white/[0.08] pb-4">
+      <div>
+        <div class="text-[10px] font-mono text-[#00ff66] tracking-widest uppercase">LAB 02 // MULTI-DIMENSIONAL LABORATORY</div>
+        <h1 class="text-2xl font-display font-bold text-white tracking-wide mt-1">3D Particulate Dynamics &amp; Combustion Lab</h1>
+        <p class="text-xs text-[#71717a]">Simulating incomplete vs complete combustion stoichiometry and fluid stagnation</p>
+      </div>
+
+      <label class="flex items-center gap-2 cursor-pointer font-mono text-xs text-[#71717a]">
+        <span>AUTO STREAM LOOP:</span>
+        <input type="checkbox" id="sim-stream-toggle" onchange="toggleSimStream(this.checked)" class="sr-only peer">
+        <div class="w-9 h-5 bg-[#1c1c1e] rounded-none peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00ff66] relative"></div>
+      </label>
+    </div>
+
+    <!-- MAIN 3D WORKSTAGE -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Interactive 3D Chamber Large Stage -->
+      <div class="lg:col-span-8 instrument-card p-6 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
+        <div class="flex items-center justify-between z-10 font-mono text-xs">
+          <span class="text-[#00ff66] font-bold">[VOLUMETRIC FLUID FIELD // 360° ORBIT]</span>
+          <span class="text-[#71717a]">DRAG MOUSE TO ROTATE CAMERA</span>
+        </div>
+
+        <div class="relative w-full h-96 flex items-center justify-center my-4">
+          <canvas id="chamber-3d-canvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+          <div class="absolute bottom-2 left-2 text-[10px] font-mono text-[#71717a] space-y-1">
+            <div>PARTICLE FIELD: <span id="sim-pcount" class="text-white">280</span> VECTORS</div>
+            <div>THERMAL UPFLOW: <span id="sim-upflow" class="text-[#00ff66]">1.42 m/s</span></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 pt-3 border-t border-white/[0.08] text-xs font-mono z-10">
+          <div>
+            <span class="text-[#71717a] text-[9px] block">SENSED CO</span>
+            <span id="sim-co-disp" class="text-[#ff3333] font-bold text-base">3.04 ppm</span>
+          </div>
+          <div>
+            <span class="text-[#71717a] text-[9px] block">INFERRED CO₂</span>
+            <span id="sim-co2-disp" class="text-[#00ff66] font-bold text-base">581 ppm</span>
+          </div>
+          <div>
+            <span class="text-[#71717a] text-[9px] block">RATIO ΔCO/ΔCO₂</span>
+            <span id="sim-ratio-disp" class="text-white font-bold text-base">1.83%</span>
+          </div>
+          <div>
+            <span class="text-[#71717a] text-[9px] block">CPCB AQI</span>
+            <span id="sim-aqi-disp" class="text-[#ffb000] font-bold text-base">118</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls & Presets Panel -->
+      <div class="lg:col-span-4 space-y-4">
+        
+        <!-- Scenarios -->
+        <div class="instrument-card p-5 space-y-3 font-mono text-xs">
+          <div class="font-bold text-white border-b border-white/10 pb-2">
+            [PRE-CONFIGURED STRESS TESTS]
+          </div>
+          <div class="space-y-2">
+            <button onclick="applySimPreset('clean')" class="w-full p-2.5 border border-white/10 hover:border-[#00ff66] bg-black/40 text-left transition flex items-center justify-between">
+              <span class="text-[#00ff66]">[01] CLEAN MOUNTAIN</span>
+              <span class="text-[10px] text-[#71717a]">0.4 ppm CO</span>
+            </button>
+            <button onclick="applySimPreset('traffic')" class="w-full p-2.5 border border-white/10 hover:border-[#ffb000] bg-black/40 text-left transition flex items-center justify-between">
+              <span class="text-[#ffb000]">[02] URBAN TRAFFIC</span>
+              <span class="text-[10px] text-[#71717a]">8.5 ppm CO</span>
+            </button>
+            <button onclick="applySimPreset('kitchen')" class="w-full p-2.5 border border-white/10 hover:border-[#ff6937] bg-black/40 text-left transition flex items-center justify-between">
+              <span class="text-[#ff6937]">[03] KITCHEN SMOG</span>
+              <span class="text-[10px] text-[#71717a]">18.2 ppm CO</span>
+            </button>
+            <button onclick="applySimPreset('industrial')" class="w-full p-2.5 border border-white/10 hover:border-[#ff3333] bg-black/40 text-left transition flex items-center justify-between">
+              <span class="text-[#ff3333]">[04] INDUSTRIAL HAZARD</span>
+              <span class="text-[10px] text-[#71717a]">38.0 ppm CO</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sliders -->
+        <div class="instrument-card p-5 space-y-4 font-mono text-xs">
+          <div class="font-bold text-white border-b border-white/10 pb-2">
+            [MANUAL STOCHASTIC SLIDERS]
+          </div>
+          
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="text-[#71717a]">TEMPERATURE</span>
+              <span id="s-temp-val" class="text-white">25.0 °C</span>
+            </div>
+            <input type="range" id="s-temp" min="10" max="45" step="0.5" value="25.0" oninput="onSimSlider()" class="w-full accent-[#00ff66]">
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="text-[#71717a]">HUMIDITY</span>
+              <span id="s-hum-val" class="text-white">55 %</span>
+            </div>
+            <input type="range" id="s-hum" min="15" max="95" step="1" value="55" oninput="onSimSlider()" class="w-full accent-[#00e5ff]">
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between">
+              <span class="text-[#ff3333]">SENSED CO</span>
+              <span id="s-co-val" class="text-[#ff3333]">2.00 ppm</span>
+            </div>
+            <input type="range" id="s-co" min="0.1" max="50" step="0.2" value="2.0" oninput="onSimSlider()" class="w-full accent-[#ff3333]">
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/static/chamber_3d.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      initAtmosphereChamber();
+    });
+
+    async function applySimPreset(key) {
+      try {
+        const res = await fetch(`/api/demo/apply-preset/${key}`, { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'success') {
+          const t = d.data;
+          document.getElementById('sim-co-disp').textContent = t.co_ppm.toFixed(2) + ' ppm';
+          document.getElementById('sim-co2-disp').textContent = Math.round(t.predicted_co2_ppm) + ' ppm';
+          document.getElementById('sim-ratio-disp').textContent = (t.co_co2_ratio_pct || 1.8) + '%';
+          document.getElementById('sim-aqi-disp').textContent = t.aqi;
+
+          document.getElementById('s-temp').value = t.temperature;
+          document.getElementById('s-hum').value = t.humidity;
+          document.getElementById('s-co').value = t.co_ppm;
+          document.getElementById('s-temp-val').textContent = t.temperature.toFixed(1) + ' °C';
+          document.getElementById('s-hum-val').textContent = t.humidity.toFixed(0) + ' %';
+          document.getElementById('s-co-val').textContent = t.co_ppm.toFixed(2) + ' ppm';
+
+          updateChamberParams(t.co_ppm, t.predicted_co2_ppm, t.temperature, t.humidity);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    let timer = null;
+    function onSimSlider() {
+      const temp = parseFloat(document.getElementById('s-temp').value);
+      const hum = parseFloat(document.getElementById('s-hum').value);
+      const co = parseFloat(document.getElementById('s-co').value);
+
+      document.getElementById('s-temp-val').textContent = temp.toFixed(1) + ' °C';
+      document.getElementById('s-hum-val').textContent = hum.toFixed(0) + ' %';
+      document.getElementById('s-co-val').textContent = co.toFixed(2) + ' ppm';
+
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const res = await fetch('/api/demo/simulate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ temperature: temp, humidity: hum, co_ppm: co, scenario_name: 'SimLab' })
+        });
+        const d = await res.json();
+        if (d.status === 'success') {
+          const t = d.data;
+          document.getElementById('sim-co-disp').textContent = t.co_ppm.toFixed(2) + ' ppm';
+          document.getElementById('sim-co2-disp').textContent = Math.round(t.predicted_co2_ppm) + ' ppm';
+          document.getElementById('sim-ratio-disp').textContent = (t.co_co2_ratio_pct || 1.8) + '%';
+          document.getElementById('sim-aqi-disp').textContent = t.aqi;
+          updateChamberParams(t.co_ppm, t.predicted_co2_ppm, t.temperature, t.humidity);
+        }
+      }, 100);
+    }
+
+    async function toggleSimStream(en) {
+      await fetch('/api/demo/stream-toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled: en })
+      });
+    }
+  </script>
+</body>
+</html>
