@@ -29,48 +29,33 @@ function renderDashboard(t) {
   if (!t) return;
   currentTelemetry = t;
 
-  const level = t.level || 0;
+  const ml = t.ml_data || {};
+
   const co = t.co || 0.0;
-  const co2 = Math.round(t.co2 || 400.0);
+  // Use AI predicted CO2 if available, else hardware CO2
+  const co2 = ml.predicted_co2_ppm ? Math.round(ml.predicted_co2_ppm) : Math.round(t.co2 || 400.0);
   const temp = t.temperature || 25.0;
   const hum = Math.round(t.humidity || 50.0);
   const pm = Math.round(t.pm || 0.0);
 
-  // Big AQI Score & Colors
+  // Big AQI Score & Colors (Use ML AQI and Risk Level)
+  const aqiScore = ml.aqi !== undefined ? ml.aqi : (t.level || 0);
+  const riskLevel = ml.health_risk_level || "Low";
+
   const bigNum = document.getElementById('big-aqi-number');
   const bigStat = document.getElementById('big-aqi-status');
   const badge = document.getElementById('air-badge');
   const verdictTitle = document.getElementById('air-verdict-title');
   const verdictDesc = document.getElementById('air-verdict-desc');
 
-  let colorClass = '#10b981'; // Emerald/Green
-  let statusText = 'Good Air Quality';
-  let badgeText = 'Good Air Quality';
-  let titleText = 'The air is clean and safe to breathe.';
-  let descText = 'Pollution levels are low. Windows can be opened for fresh air ventilation, and outdoor exercise is safe for everyone including children and seniors.';
-
-  if (level === 3) {
-    colorClass = '#ef4444'; // Red
-    statusText = 'Hazardous Air';
-    badgeText = 'Severe Danger';
-    titleText = 'Warning: Severe pollution detected!';
-    descText = 'Smoke and pollutant levels are hazardous. Close all windows, stay indoors, and run an air purifier immediately.';
-  } else if (level === 2) {
-    colorClass = '#f97316'; // Orange
-    statusText = 'Poor Air Quality';
-    badgeText = 'Poor Air Quality';
-    titleText = 'Unhealthy air conditions.';
-    descText = 'Smoke is elevated. Sensitive people, children, and asthma patients should avoid outdoor exertion. Wear an N95 mask outside.';
-  } else if (level === 1) {
-    colorClass = '#f59e0b'; // Amber/Yellow
-    statusText = 'Moderate Level';
-    badgeText = 'Moderate Air Quality';
-    titleText = 'Acceptable air, but mild caution for sensitive groups.';
-    descText = 'Air quality is acceptable for most people. Anyone experiencing throat irritation should reduce heavy outdoor workouts.';
-  }
+  let colorClass = ml.health_risk_color || '#10b981';
+  let statusText = riskLevel === "Low" ? 'Safe Level' : `${riskLevel} Risk`;
+  let badgeText = ml.aqi_category || 'Good Air Quality';
+  let titleText = ml.health_risk_summary || 'The air is clean and safe to breathe.';
+  let descText = ml.precautions ? ml.precautions.join(" ") : 'Pollution levels are low. Windows can be opened.';
 
   if (bigNum) {
-    bigNum.textContent = level;
+    bigNum.textContent = aqiScore;
     bigNum.style.color = colorClass;
   }
   if (bigStat) {
@@ -102,24 +87,24 @@ function renderDashboard(t) {
   const cardHum = document.getElementById('card-hum');
   if (cardHum) cardHum.textContent = hum;
 
-  // Action Advice Cards
+  // Action Advice Cards using AI Data
   const actMask = document.getElementById('action-mask');
   if (actMask) {
-      if (level === 0) actMask.textContent = 'No mask needed';
-      else actMask.textContent = 'Consider N95 outdoors';
+      actMask.textContent = ml.mask_recommendation || 'No mask needed';
   }
 
   const actVent = document.getElementById('action-vent');
   if (actVent) {
-      if (level <= 1) actVent.textContent = 'Open windows for breeze';
-      else actVent.textContent = 'Keep windows closed';
+      actVent.textContent = ml.ventilation_advisory || 'Open windows for breeze';
   }
 
   const actHealth = document.getElementById('action-health');
   if (actHealth) {
-    if (level === 0) actHealth.textContent = 'Safe for all activities';
-    else if (level === 1) actHealth.textContent = 'Mild caution for asthma patients';
-    else actHealth.textContent = 'Keep asthma patients & children indoors';
+    if (ml.vulnerable_groups && ml.vulnerable_groups.length > 0) {
+        actHealth.textContent = ml.vulnerable_groups[0].split(":")[1] || ml.vulnerable_groups[0];
+    } else {
+        actHealth.textContent = 'Safe for all activities';
+    }
   }
 
   // Update slider label if slider is visible
