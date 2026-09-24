@@ -1,0 +1,27 @@
+# Environment Variables (contains App Password)
+.env
+
+# Configuration and State Files (contains email target)
+backend/config.json
+backend/notifications.json
+
+# Database
+backend/airqual.db
+
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
