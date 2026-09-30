@@ -25,8 +25,8 @@ def save_notification(alert):
         json.dump(alerts, f, indent=2)
 
 def check_and_send_alert(ml_output: dict):
-    aqi = ml_output.get("aqi", 0)
-    if aqi < 50:
+    health_risk_score = ml_output.get("health_risk_score", 0.0)
+    if health_risk_score <= 20:
         return
 
     risk_level = ml_output.get("health_risk_level", "Low")
