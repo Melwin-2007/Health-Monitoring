@@ -358,3 +358,4 @@ class AirQualityPredictor:
 
 # Global instance
 predictor_instance = AirQualityPredictor()
+#kjnjkn
