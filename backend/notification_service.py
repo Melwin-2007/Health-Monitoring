@@ -77,7 +77,7 @@ def check_and_send_alert(ml_output: dict):
         SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").replace(" ", "")
         
         if not SMTP_SENDER or not SMTP_PASSWORD:
-            print(f"[EMAIL ABORTED] Missing SMTP_SENDER or SMTP_PASSWORD in environment variables.")
+            print("email not sent")
             return
 
         try:
@@ -138,6 +138,7 @@ def check_and_send_alert(ml_output: dict):
             server.login(SMTP_SENDER, SMTP_PASSWORD)
             server.send_message(msg)
             server.quit()
-            print(f"[EMAIL SENT] Successfully dispatched alert to {target_email}")
+            print("email sent")
         except Exception as e:
-            print(f"[EMAIL FAILED] Could not send email to {target_email}. Did you configure your SMTP credentials? Error: {e}")
+            print("email not sent")
+            print(f"Details: {e}")
