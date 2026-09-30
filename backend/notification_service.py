@@ -25,15 +25,16 @@ def save_notification(alert):
         json.dump(alerts, f, indent=2)
 
 def check_and_send_alert(ml_output: dict):
-    risk_level = ml_output.get("health_risk_level", "Low")
-    if risk_level not in ["High", "Severe"]:
+    aqi = ml_output.get("aqi", 0)
+    if aqi < 50:
         return
 
+    risk_level = ml_output.get("health_risk_level", "Low")
     now = datetime.now()
     last_time = _last_alert_time.get(risk_level)
 
-    # Cooldown of 10 minutes (600 seconds) for the same alert level
-    if last_time and (now - last_time).total_seconds() < 600:
+    # Cooldown of 2 minutes (120 seconds) for the same alert level
+    if last_time and (now - last_time).total_seconds() < 120:
         return
 
     _last_alert_time[risk_level] = now
