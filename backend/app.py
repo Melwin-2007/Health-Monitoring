@@ -6,7 +6,7 @@ import os
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Response, Query
+from fastapi import FastAPI, HTTPException, Response, Query, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,7 +59,7 @@ async def on_startup():
     init_db()
 
 @app.post("/api/iot/ingest")
-async def ingest_hardware_data(payload: HardwareIngestPayload):
+async def ingest_hardware_data(payload: HardwareIngestPayload, background_tasks: BackgroundTasks):
     SERVER_STATE["last_hardware_ping"] = datetime.now().isoformat()
     
     data = payload.dict()
@@ -90,7 +90,7 @@ async def ingest_hardware_data(payload: HardwareIngestPayload):
     }
     
     # 3. Alert / Notification System Check
-    check_and_send_alert(ml_output)
+    background_tasks.add_task(check_and_send_alert, ml_output)
     
     data["ml_data"] = ml_output
     
