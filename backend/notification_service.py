@@ -30,7 +30,9 @@ def check_and_send_alert(ml_output: dict):
     now = datetime.now()
     last_time = _last_alert_time.get(risk_level)
 
-    # Removed cooldown to allow continuous emails
+    # 30-second cooldown
+    if last_time and (now - last_time).total_seconds() < 30:
+        return
 
     _last_alert_time[risk_level] = now
 
