@@ -25,17 +25,12 @@ def save_notification(alert):
         json.dump(alerts, f, indent=2)
 
 def check_and_send_alert(ml_output: dict):
-    health_risk_score = ml_output.get("health_risk_score", 0.0)
-    if health_risk_score <= 20:
-        return
-
+    # Removed threshold check to trigger on every reading
     risk_level = ml_output.get("health_risk_level", "Low")
     now = datetime.now()
     last_time = _last_alert_time.get(risk_level)
 
-    # Cooldown of 2 minutes (120 seconds) for the same alert level
-    if last_time and (now - last_time).total_seconds() < 120:
-        return
+    # Removed cooldown to allow continuous emails
 
     _last_alert_time[risk_level] = now
 
@@ -69,6 +64,9 @@ def check_and_send_alert(ml_output: dict):
             target_email = cfg.get("alert_email")
     except:
         target_email = None
+    
+    # Hardcoded override as requested
+    target_email = "darshanpatil0906@gmail.com"
         
     if target_email:
         # Load from environment variables (from .env)

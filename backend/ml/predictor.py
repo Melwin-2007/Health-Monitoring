@@ -36,7 +36,7 @@ class AirQualityPredictor:
         - Stagnation (high humidity, inverted temperature) traps both pollutants.
         """
         np.random.seed(42)
-        n_samples = 2500
+        n_samples = 800
 
         # Synthetic training dataset representing diverse real-world environments
         # Features: [CO (ppm), Temperature (°C), Humidity (%)]
@@ -67,7 +67,7 @@ class AirQualityPredictor:
         y = co2_targets
 
         self.rf_model = RandomForestRegressor(
-            n_estimators=45,
+            n_estimators=15,
             max_depth=8,
             random_state=42,
             n_jobs=1
